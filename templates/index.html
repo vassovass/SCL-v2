@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Step Count Submission</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Flatpickr for date selection -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+</head>
+<body class="bg-purple-50 min-h-screen flex items-center justify-center py-10">
+
+    <div class="bg-white rounded-lg shadow-lg max-w-2xl w-full p-8 border-t-8 border-purple-600">
+        <h1 class="text-3xl font-bold mb-2">Daily Step Count Submission</h1>
+        <p class="text-gray-600 mb-8">Please submit a screenshot of your Daily step count and any relevant comments.</p>
+
+        <form action="/analyze" method="post" enctype="multipart/form-data" class="space-y-6">
+
+            <!-- Name Selection -->
+            <div>
+                <label for="name" class="block text-sm font-medium text-gray-700 mb-2">Select your name</label>
+                <select id="name" name="name" required class="block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-purple-500 focus:border-purple-500">
+                    <option value="" disabled selected>Choose...</option>
+                    <option value="Mel">Mel</option>
+                    <option value="Jacques">Jacques</option>
+                    <option value="Dene">Dene</option>
+                    <option value="Keiran">Keiran</option>
+                    <option value="Vasso">Vasso</option>
+                </select>
+            </div>
+
+            <!-- Submission Type -->
+            <div>
+                <span class="block text-sm font-medium text-gray-700 mb-2">Submission Type</span>
+                <div class="flex items-center space-x-4">
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="submission_type" value="daily" checked class="form-radio text-purple-600" onchange="toggleDateInput()">
+                        <span class="ml-2">Single Day</span>
+                    </label>
+                    <label class="inline-flex items-center">
+                        <input type="radio" name="submission_type" value="weekly" class="form-radio text-purple-600" onchange="toggleDateInput()">
+                        <span class="ml-2">Weekly / Multiple Days</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Date Selection -->
+            <div>
+                <label for="dates" class="block text-sm font-medium text-gray-700 mb-2">Date(s)</label>
+                <input type="text" id="dates" name="dates" required class="block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-purple-500 focus:border-purple-500" placeholder="Select date(s)...">
+            </div>
+
+            <!-- Screenshot Upload -->
+            <div>
+                <label for="screenshot" class="block text-sm font-medium text-gray-700 mb-2">Upload Screenshot of Step Count</label>
+                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                    <div class="space-y-1 text-center">
+                        <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                            <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                        </svg>
+                        <div class="flex text-sm text-gray-600">
+                            <label for="screenshot" class="relative cursor-pointer bg-white rounded-md font-medium text-purple-600 hover:text-purple-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-purple-500">
+                                <span>Upload a file</span>
+                                <input id="screenshot" name="screenshot" type="file" class="sr-only" required accept="image/*">
+                            </label>
+                            <p class="pl-1">or drag and drop</p>
+                        </div>
+                        <p class="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                    </div>
+                </div>
+                <div id="file-name" class="mt-2 text-sm text-gray-500"></div>
+            </div>
+
+            <!-- Comments -->
+            <div>
+                <label for="comment" class="block text-sm font-medium text-gray-700 mb-2">Comments (Optional)</label>
+                <textarea id="comment" name="comment" rows="3" class="block w-full border border-gray-300 rounded-md shadow-sm p-3 focus:ring-purple-500 focus:border-purple-500" placeholder="Any additional info..."></textarea>
+            </div>
+
+            <div class="pt-4">
+                <button type="submit" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                    Analyze & Verify
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        // File upload filename display
+        document.getElementById('screenshot').addEventListener('change', function(e) {
+            var fileName = e.target.files[0].name;
+            document.getElementById('file-name').textContent = 'Selected file: ' + fileName;
+        });
+
+        // Date picker configuration
+        let datePicker = flatpickr("#dates", {
+            dateFormat: "Y-m-d",
+            maxDate: "today",
+            mode: "single"
+        });
+
+        function toggleDateInput() {
+            const submissionType = document.querySelector('input[name="submission_type"]:checked').value;
+
+            if (submissionType === 'weekly') {
+                datePicker.destroy();
+                datePicker = flatpickr("#dates", {
+                    dateFormat: "Y-m-d",
+                    maxDate: "today",
+                    mode: "multiple" // Using multiple for flexibility, could be "range" too
+                });
+                document.getElementById('dates').placeholder = "Select multiple dates...";
+            } else {
+                datePicker.destroy();
+                datePicker = flatpickr("#dates", {
+                    dateFormat: "Y-m-d",
+                    maxDate: "today",
+                    mode: "single"
+                });
+                document.getElementById('dates').placeholder = "Select a date...";
+            }
+        }
+    </script>
+</body>
+</html>
