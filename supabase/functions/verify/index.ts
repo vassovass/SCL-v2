@@ -5,17 +5,62 @@ const SUPABASE_ANON_KEY = assertEnv("SUPABASE_ANON_KEY");
 const SUPABASE_SERVICE_ROLE_KEY = assertEnv("SUPABASE_SERVICE_ROLE_KEY");
 const GEMINI_API_KEY = assertEnv("GEMINI_API_KEY");
 const PROOFS_BUCKET = Deno.env.get("PROOFS_BUCKET") ?? "proofs";
-const MODEL_NAME = Deno.env.get("GEMINI_MODEL") ?? "models/gemini-2.5-flash";
-const VERIFY_PER_MINUTE = parsePositiveInt(Deno.env.get("VERIFY_LIMIT_PER_MINUTE"), 6);
-const VERIFY_PER_HOUR = parsePositiveInt(Deno.env.get("VERIFY_LIMIT_PER_HOUR"), 60);
-const VERIFY_GLOBAL_PER_MINUTE = parsePositiveInt(Deno.env.get("VERIFY_LIMIT_PER_MINUTE_GLOBAL"), 30);
-const VERIFY_GLOBAL_PER_HOUR = parsePositiveInt(Deno.env.get("VERIFY_LIMIT_PER_HOUR_GLOBAL"), 240);
+
+// Default values (will be overridden by DB settings)
+const DEFAULT_MODEL_NAME = Deno.env.get("GEMINI_MODEL") ?? "models/gemini-2.5-flash";
+const DEFAULT_VERIFY_PER_MINUTE = parsePositiveInt(Deno.env.get("VERIFY_LIMIT_PER_MINUTE"), 6);
+const DEFAULT_VERIFY_PER_HOUR = parsePositiveInt(Deno.env.get("VERIFY_LIMIT_PER_HOUR"), 60);
+const DEFAULT_VERIFY_GLOBAL_PER_MINUTE = parsePositiveInt(Deno.env.get("VERIFY_LIMIT_PER_MINUTE_GLOBAL"), 30);
+const DEFAULT_VERIFY_GLOBAL_PER_HOUR = parsePositiveInt(Deno.env.get("VERIFY_LIMIT_PER_HOUR_GLOBAL"), 240);
 
 const serviceClient = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
   auth: { persistSession: false },
 });
 
 const rateStore = new Map<string, RateState>();
+
+// Cache for site settings (refreshed every 60 seconds)
+let settingsCache: Record<string, string> = {};
+let settingsCacheTime = 0;
+const SETTINGS_CACHE_TTL = 60_000; // 60 seconds
+
+async function getSettings(): Promise<{
+  modelName: string;
+  verifyPerMinute: number;
+  verifyPerHour: number;
+  verifyGlobalPerMinute: number;
+  verifyGlobalPerHour: number;
+}> {
+  const now = Date.now();
+
+  // Refresh cache if expired
+  if (now - settingsCacheTime > SETTINGS_CACHE_TTL) {
+    try {
+      const { data, error } = await serviceClient
+        .from("site_settings")
+        .select("key, value");
+
+      if (!error && data) {
+        settingsCache = {};
+        for (const row of data) {
+          settingsCache[row.key] = row.value;
+        }
+        settingsCacheTime = now;
+      }
+    } catch (e) {
+      console.error("Failed to fetch settings from DB:", e);
+      // Continue with cached/default values
+    }
+  }
+
+  return {
+    modelName: settingsCache["gemini_model"] ?? DEFAULT_MODEL_NAME,
+    verifyPerMinute: parsePositiveInt(settingsCache["verify_per_minute"], DEFAULT_VERIFY_PER_MINUTE),
+    verifyPerHour: parsePositiveInt(settingsCache["verify_per_hour"], DEFAULT_VERIFY_PER_HOUR),
+    verifyGlobalPerMinute: parsePositiveInt(settingsCache["verify_global_per_minute"], DEFAULT_VERIFY_GLOBAL_PER_MINUTE),
+    verifyGlobalPerHour: parsePositiveInt(settingsCache["verify_global_per_hour"], DEFAULT_VERIFY_GLOBAL_PER_HOUR),
+  };
+}
 
 interface VerifyPayload {
   steps: number;
@@ -61,12 +106,15 @@ Deno.serve(async (req) => {
   const start = performance.now();
 
   try {
+    // Fetch dynamic settings from DB (with caching)
+    const settings = await getSettings();
+
     const payload = await parsePayload(req);
     const authContext = await getAuthContext(req);
     const actorId = payload.requester_id ?? authContext?.userId ?? "system";
 
-    enforceRateLimit(actorId, VERIFY_PER_MINUTE, VERIFY_PER_HOUR);
-    enforceRateLimit("__global__", VERIFY_GLOBAL_PER_MINUTE, VERIFY_GLOBAL_PER_HOUR);
+    enforceRateLimit(actorId, settings.verifyPerMinute, settings.verifyPerHour);
+    enforceRateLimit("__global__", settings.verifyGlobalPerMinute, settings.verifyGlobalPerHour);
 
     const proof = await fetchProof(payload.proof_path);
 
@@ -76,6 +124,7 @@ Deno.serve(async (req) => {
       base64: proof.base64,
       mimeType: proof.contentType,
       requestId,
+      modelName: settings.modelName,
     });
 
     const evaluation = evaluateVerdict({
@@ -264,8 +313,8 @@ async function fetchProof(path: string): Promise<{ base64: string; contentType: 
   return { base64, contentType };
 }
 
-async function callGemini({ stepsClaimed, forDate, base64, mimeType, requestId }:{ stepsClaimed: number; forDate: string; base64: string; mimeType: string; requestId: string; }): Promise<GeminiResult> {
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/${MODEL_NAME}:generateContent?key=${GEMINI_API_KEY}`;
+async function callGemini({ stepsClaimed, forDate, base64, mimeType, requestId, modelName }:{ stepsClaimed: number; forDate: string; base64: string; mimeType: string; requestId: string; modelName: string; }): Promise<GeminiResult> {
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/${modelName}:generateContent?key=${GEMINI_API_KEY}`;
 
   const prompt = `The user states they walked ${stepsClaimed} steps on ${forDate}. From the attached screenshot, extract the actual steps, distance in kilometers, calories, and the date displayed. Respond strictly as JSON with keys steps, km, calories, date.`;
 
