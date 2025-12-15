@@ -149,7 +149,7 @@ export default function DashboardPage() {
               </p>
             )}
             {recentActivity.map((item) => (
-              <div key={item.id} className="flex items-center justify-between px-4 py-3 text-sm">
+              <div key={`${item.league_id}-${item.for_date}`} className="flex items-center justify-between px-4 py-3 text-sm">
                 <div>
                   <p className="font-semibold text-slate-100">{item.steps.toLocaleString()} steps</p>
                   <p className="text-xs text-slate-500">{item.for_date}</p>

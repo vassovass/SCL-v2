@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 
 import { ConsentBanner } from "@/components/consent/ConsentBanner";
 import { ManageConsentButton } from "@/components/consent/ManageConsentButton";
+import { NavHeader } from "@/components/navigation/NavHeader";
 import { AuthProvider } from "@/components/providers/AuthProvider";
 import { ConsentProvider } from "@/components/providers/ConsentProvider";
 
@@ -23,6 +24,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
       <body className="min-h-screen bg-slate-950 text-slate-50 antialiased">
         <ConsentProvider>
           <AuthProvider>
+            <NavHeader />
             <main className="flex min-h-screen flex-col">{children}</main>
             <ConsentBanner />
             <ManageConsentButton />
