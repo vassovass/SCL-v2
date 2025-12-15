@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(cat:*)",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git fetch:*)",
+      "Bash(supabase db push:*)",
+      "Bash(supabase functions deploy:*)",
+      "Read(apps/web/**)",
+      "Read(supabase/**)"
     ],
     "deny": [],
     "ask": []

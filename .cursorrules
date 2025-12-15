@@ -1,0 +1,96 @@
+# StepCountLeague - Cursor Rules
+
+## Project Context
+This is a Next.js 15 App Router application with Supabase backend and Cloudflare deployment.
+See CLAUDE.md for full technical documentation.
+
+## Code Style
+
+### TypeScript
+- Use strict TypeScript with Zod for runtime validation
+- Prefer `interface` over `type` for object shapes
+- Use `@/*` path alias (maps to `apps/web/`)
+
+### React/Next.js
+- Use Server Components by default, add "use client" only when needed
+- Colocate page-specific components in `app/_components/`
+- Shared components go in `components/`
+
+### API Routes
+- All routes use Zod schema validation
+- Use helpers from `lib/server/http.ts` (json, badRequest, forbidden, etc.)
+- Auth via `requireUser(req)` from `lib/server/supabase.ts`
+- Never import `lib/server/*` in client components
+
+### Styling
+- Tailwind CSS only, no CSS modules
+- Dark theme: slate-900 background, slate-50 text
+- Primary: sky-500, Secondary: amber-500
+
+## Key Files
+
+| Purpose | Location |
+|---------|----------|
+| API routes | `apps/web/app/api/` |
+| Pages | `apps/web/app/` |
+| Components | `apps/web/components/` |
+| Server utils | `apps/web/lib/server/` |
+| Client utils | `apps/web/lib/api/` |
+| DB migrations | `supabase/migrations/` |
+| Edge Functions | `supabase/functions/` |
+
+## Database
+
+- All tables use Row Level Security (RLS)
+- Settings in `site_settings` table (key-value)
+- Superadmin flag: `users.is_superadmin`
+- Always create migrations for schema changes
+
+## Common Patterns
+
+### API Route
+```typescript
+import { z } from "zod";
+import { badRequest, json, handleRouteError } from "@/lib/server/http";
+import { requireUser } from "@/lib/server/supabase";
+
+const schema = z.object({ ... });
+
+export async function POST(req: Request) {
+  try {
+    const body = await req.json();
+    const input = schema.parse(body);
+    const { supabase, user } = await requireUser(req);
+    // ... logic
+    return json({ data });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return badRequest("Invalid payload", { issues: error.issues });
+    }
+    return handleRouteError(error);
+  }
+}
+```
+
+### Client Component with API
+```typescript
+"use client";
+import { apiRequest, ApiError } from "@/lib/api/client";
+
+async function fetchData() {
+  try {
+    const data = await apiRequest<ResponseType>("endpoint", { method: "GET" });
+    // handle data
+  } catch (err) {
+    if (err instanceof ApiError) {
+      // handle API error
+    }
+  }
+}
+```
+
+## Commands
+- `npm run dev` - Start dev server
+- `npm run lint` - Check code
+- `supabase db push` - Apply migrations
+- `supabase functions deploy verify` - Deploy Edge Function

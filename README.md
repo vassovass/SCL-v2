@@ -1,72 +1,110 @@
 # StepCountLeague (SCL) — MVP
 
-This repository implements the StepCountLeague MVP defined in the PRD. The stack combines Next.js (App Router), Supabase (auth, database, storage), and Cloudflare Workers via the OpenNext adapter.
+A step-tracking competition platform where users create/join leagues, submit daily step counts with screenshot proofs, and compete on leaderboards. AI-powered verification validates step counts from uploaded screenshots.
 
-## Quick start
+## Features
 
-1. Install dependencies
-   ```bash
-   cd apps/web
-   npm ci
-   ```
-2. Copy environment variables
-   ```bash
-   cp .dev.vars.example .dev.vars
-   # edit values
-   ```
-3. Run the preview worker locally
-   ```bash
-   npm run preview
-   ```
+- **User Authentication** - Email/password via Supabase Auth
+- **League Management** - Create leagues, invite via code, role-based access (owner/admin/member)
+- **Step Submissions** - Daily step count with screenshot proof
+- **AI Verification** - Google Gemini extracts step count from screenshots
+- **Leaderboards** - Ranked standings with weekly periods
+- **Superadmin System** - Dynamic site settings, user management
+- **Rate Limiting** - Configurable per-user and global limits with client-side retry queue
 
-## Environment
+## Tech Stack
 
-| Variable | Description |
-| --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service role key (server only) |
-| `NEXT_PUBLIC_ADSENSE_CLIENT` | (Optional) Google AdSense client ID |
+- **Frontend**: Next.js 15 (App Router), React 18, TypeScript, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Auth, Storage, Edge Functions)
+- **AI**: Google Gemini 2.5 Flash
+- **Deployment**: Cloudflare Pages via OpenNext
 
-Consent Mode is controlled by the custom CMP in `ConsentProvider`. A floating **Manage cookies** button re-opens preferences.
+## Quick Start
 
-## Supabase
+### Windows
+```bash
+run-dev.bat    # Tests Gemini API, installs deps, starts server
+```
 
-SQL migrations are stored under `supabase/migrations`. Apply them with the Supabase CLI:
+### Manual Setup
+```bash
+cd apps/web
+npm ci
+cp .dev.vars.example .dev.vars   # Edit with your keys
+cp .dev.vars .env.local          # Copy for Next.js
+npm run dev                       # http://localhost:3000
+```
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service role key (server only) |
+| `GEMINI_API_KEY` | Yes | Google Gemini API key |
+| `NEXT_PUBLIC_ADSENSE_CLIENT` | No | Google AdSense client ID |
+
+## Supabase Setup
+
+Apply migrations and deploy the verification Edge Function:
 
 ```bash
 supabase db push
-```
-
-An Edge Function for Gemini verification lives at `supabase/functions/verify`—deploy it with:
-
-```bash
 supabase functions deploy verify
 ```
+
+### First Superadmin
+
+After creating your account, promote yourself to superadmin:
+
+```sql
+UPDATE users SET is_superadmin = true WHERE id = 'your-user-id';
+```
+
+Then access `/admin` to manage settings and other users.
 
 ## Scripts
 
 Inside `apps/web`:
 
 | Command | Description |
-| --- | --- |
+|---------|-------------|
 | `npm run dev` | Next.js dev server |
-| `npm run preview` | Build via OpenNext and run on Miniflare |
-| `npm run deploy` | Build and deploy via OpenNext CLI |
-| `npm run lint` | ESLint using Next.js config |
+| `npm run lint` | ESLint check |
+| `npm run preview` | Build + run on Miniflare |
+| `npm run deploy` | Deploy to Cloudflare |
 
-## Testing
+## Deployment (Cloudflare Pages)
 
-- `SubmissionForm` and leaderboard flows rely on Supabase RLS; integration tests should run against a local Supabase instance using seeded data.
-- The verification Edge Function includes tolerance logic that should be extended with unit tests (e.g. using Deno test) before production rollout.
+1. Connect GitHub repo to Cloudflare Pages
+2. **Build command**: Leave empty (handled by deploy command)
+3. **Deploy command**: `npx wrangler deploy`
+4. **Path**: `apps/web`
+5. Add environment variables in Settings > Variables (encrypt secrets)
+6. Deploy Supabase Edge Function separately with `supabase functions deploy verify`
 
-## Deployment
+## Project Structure
 
-1. Configure a Cloudflare Pages/Workers project.
-2. Connect the GitHub repository and set the build command to `npm run deploy`.
-3. Provide required environment variables under Cloudflare → Settings → Variables.
-4. Attach the Supabase project credentials and Gemini API key (`GEMINI_API_KEY`) in Workers secrets.
+```
+apps/web/           # Next.js application
+├── app/            # Pages and API routes
+├── components/     # React components
+└── lib/            # Utilities
+supabase/
+├── migrations/     # SQL migrations
+└── functions/      # Edge Functions
+```
 
-## Roadmap pointers
+## Documentation
 
-Future phases (weekly matches, advanced analytics, monetisation) build on the RPC surfaces added in `supabase/migrations`. Keep new features behind feature flags to honour the modular architecture.
+See [CLAUDE.md](./CLAUDE.md) for detailed technical documentation including:
+- Complete API reference
+- Database schema
+- Code conventions
+- Verification flow
+- Superadmin system
+
+## Roadmap
+
+Future phases (weekly matches, advanced analytics, monetisation) build on the RPC surfaces in `supabase/migrations`. Keep new features behind feature flags to honour the modular architecture.
