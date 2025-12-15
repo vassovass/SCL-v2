@@ -2,7 +2,10 @@
   "permissions": {
     "allow": [
       "Bash(cat:*)",
-      "Bash(npm run lint)"
+      "Bash(npm run lint)",
+      "Bash(git checkout:*)",
+      "Bash(git merge:*)",
+      "Bash(Copy-Item \"C:\\Users\\vasso\\.claude-worktrees\\SCL-v2\\mystifying-wiles\\apps\\web\\.env.local\" \"D:\\Vasso\\coding projects\\SCL v2\\SCL-v2\\apps\\web\\.env.local\" -Force)"
     ],
     "deny": [],
     "ask": []
