@@ -2,12 +2,30 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
 
 import { useAuth } from "@/components/providers/AuthProvider";
 
 export function NavHeader() {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, supabase } = useAuth();
   const pathname = usePathname();
+  const [isSuperadmin, setIsSuperadmin] = useState(false);
+
+  useEffect(() => {
+    if (!user) {
+      setIsSuperadmin(false);
+      return;
+    }
+
+    supabase
+      .from("users")
+      .select("is_superadmin")
+      .eq("id", user.id)
+      .single()
+      .then(({ data }) => {
+        setIsSuperadmin(data?.is_superadmin ?? false);
+      });
+  }, [user, supabase]);
 
   const isActive = (path: string) => pathname === path;
 
@@ -45,6 +63,16 @@ export function NavHeader() {
               >
                 Join League
               </Link>
+              {isSuperadmin && (
+                <Link
+                  href="/admin"
+                  className={`text-sm font-medium transition ${
+                    isActive("/admin") ? "text-amber-400" : "text-amber-500/70 hover:text-amber-400"
+                  }`}
+                >
+                  Admin
+                </Link>
+              )}
             </div>
           )}
         </div>

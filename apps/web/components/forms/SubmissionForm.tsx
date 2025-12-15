@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { apiRequest, ApiError } from "@/lib/api/client";
 
@@ -15,6 +15,33 @@ interface SignUploadResponse {
   token?: string;
 }
 
+interface SubmissionResponse {
+  submission: {
+    id: string;
+    verified: boolean | null;
+  };
+  verification?: {
+    verified: boolean;
+  };
+  verification_error?: {
+    error: string;
+    retry_after?: number;
+  };
+}
+
+interface PendingVerification {
+  submissionId: string;
+  leagueId: string;
+  steps: number;
+  forDate: string;
+  proofPath: string;
+  retryAt: number;
+  attempts: number;
+}
+
+const MAX_RETRY_ATTEMPTS = 10;
+const MAX_WAIT_SECONDS = 180; // 3 minutes
+
 export function SubmissionForm({ leagueId, onSubmitted }: SubmissionFormProps) {
   const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [steps, setSteps] = useState<number>(0);
@@ -23,11 +50,108 @@ export function SubmissionForm({ leagueId, onSubmitted }: SubmissionFormProps) {
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [pendingVerification, setPendingVerification] = useState<PendingVerification | null>(null);
+  const [estimatedWaitSeconds, setEstimatedWaitSeconds] = useState(0);
+  const [showWaitConfirm, setShowWaitConfirm] = useState(false);
+
+  // Process pending verification with retry logic
+  useEffect(() => {
+    if (!pendingVerification) return;
+
+    const processVerification = async () => {
+      const now = Date.now();
+      const waitMs = pendingVerification.retryAt - now;
+
+      if (waitMs > 0) {
+        // Update countdown
+        setEstimatedWaitSeconds(Math.ceil(waitMs / 1000));
+        const timer = setTimeout(() => {
+          setPendingVerification((prev) => prev ? { ...prev } : null); // Trigger re-process
+        }, Math.min(waitMs, 1000));
+        return () => clearTimeout(timer);
+      }
+
+      setEstimatedWaitSeconds(0);
+      setStatus("Verifying submission...");
+
+      try {
+        const result = await apiRequest<{ verified: boolean }>("submissions/verify", {
+          method: "POST",
+          body: JSON.stringify({
+            submission_id: pendingVerification.submissionId,
+            league_id: pendingVerification.leagueId,
+            steps: pendingVerification.steps,
+            for_date: pendingVerification.forDate,
+            proof_path: pendingVerification.proofPath,
+          }),
+        });
+
+        setPendingVerification(null);
+        setStatus(result.verified ? "Verification successful!" : "Verification completed (steps may differ from screenshot).");
+        if (onSubmitted) {
+          onSubmitted();
+        }
+      } catch (err) {
+        if (err instanceof ApiError && err.status === 429) {
+          // Rate limited - schedule retry
+          const payload = err.payload as { retry_after?: number };
+          const retryAfter = payload?.retry_after ?? 10;
+          const newWaitSeconds = retryAfter + (pendingVerification.attempts * 5); // Add buffer for each attempt
+
+          if (pendingVerification.attempts >= MAX_RETRY_ATTEMPTS) {
+            setPendingVerification(null);
+            setError("Verification timed out after multiple attempts. Your submission was saved but not verified.");
+            return;
+          }
+
+          // Check if wait exceeds threshold
+          if (newWaitSeconds > MAX_WAIT_SECONDS && !showWaitConfirm) {
+            setShowWaitConfirm(true);
+            setEstimatedWaitSeconds(newWaitSeconds);
+            return;
+          }
+
+          setStatus(`Rate limited. Retrying in ${retryAfter} seconds... (attempt ${pendingVerification.attempts + 1})`);
+          setPendingVerification({
+            ...pendingVerification,
+            retryAt: Date.now() + retryAfter * 1000,
+            attempts: pendingVerification.attempts + 1,
+          });
+        } else {
+          // Other error - stop retrying
+          setPendingVerification(null);
+          const errorMsg = err instanceof Error ? err.message : "Verification failed";
+          setError(errorMsg);
+        }
+      }
+    };
+
+    processVerification();
+  }, [pendingVerification, showWaitConfirm, onSubmitted]);
+
+  const handleConfirmWait = () => {
+    setShowWaitConfirm(false);
+    // Trigger retry
+    if (pendingVerification) {
+      setPendingVerification({
+        ...pendingVerification,
+        retryAt: Date.now(),
+      });
+    }
+  };
+
+  const handleCancelWait = () => {
+    setShowWaitConfirm(false);
+    setPendingVerification(null);
+    setStatus("Submission saved but verification cancelled. It may be verified later.");
+  };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError(null);
     setStatus(null);
+    setShowWaitConfirm(false);
+    setPendingVerification(null);
 
     if (!file) {
       setError("Please attach a screenshot");
@@ -49,7 +173,7 @@ export function SubmissionForm({ leagueId, onSubmitted }: SubmissionFormProps) {
 
       await uploadToSignedUrl(signed.upload_url, file);
 
-      await apiRequest("submissions", {
+      const response = await apiRequest<SubmissionResponse>("submissions", {
         method: "POST",
         body: JSON.stringify({
           league_id: leagueId,
@@ -60,10 +184,49 @@ export function SubmissionForm({ leagueId, onSubmitted }: SubmissionFormProps) {
         }),
       });
 
-      setStatus("Submission received! Verification in progress.");
       setFile(null);
-      if (onSubmitted) {
-        onSubmitted();
+
+      // Check if verification was rate limited
+      if (response.verification_error?.error === "rate_limited") {
+        const retryAfter = response.verification_error.retry_after ?? 10;
+
+        // If wait > 3 minutes, ask for confirmation
+        if (retryAfter > MAX_WAIT_SECONDS) {
+          setEstimatedWaitSeconds(retryAfter);
+          setShowWaitConfirm(true);
+          setPendingVerification({
+            submissionId: response.submission.id,
+            leagueId,
+            steps,
+            forDate: date,
+            proofPath: signed.path,
+            retryAt: Date.now() + retryAfter * 1000,
+            attempts: 0,
+          });
+        } else {
+          setStatus(`Submission saved! Verification queued (waiting ${retryAfter}s due to rate limit)...`);
+          setPendingVerification({
+            submissionId: response.submission.id,
+            leagueId,
+            steps,
+            forDate: date,
+            proofPath: signed.path,
+            retryAt: Date.now() + retryAfter * 1000,
+            attempts: 0,
+          });
+        }
+      } else if (response.verification?.verified !== undefined) {
+        setStatus(response.verification.verified
+          ? "Submission verified successfully!"
+          : "Submission received. Verification completed (steps may differ from screenshot).");
+        if (onSubmitted) {
+          onSubmitted();
+        }
+      } else {
+        setStatus("Submission saved! Verification in progress...");
+        if (onSubmitted) {
+          onSubmitted();
+        }
       }
     } catch (err) {
       if (err instanceof ApiError) {
@@ -145,12 +308,58 @@ export function SubmissionForm({ leagueId, onSubmitted }: SubmissionFormProps) {
       {error && <p className="text-sm text-rose-400">{error}</p>}
       {status && <p className="text-sm text-sky-400">{status}</p>}
 
+      {/* Pending verification status */}
+      {pendingVerification && !showWaitConfirm && (
+        <div className="rounded-md border border-amber-700 bg-amber-900/30 p-3">
+          <p className="text-sm text-amber-300">
+            Verification in progress...
+            {estimatedWaitSeconds > 0 && (
+              <span className="ml-1">
+                (retrying in {formatWaitTime(estimatedWaitSeconds)})
+              </span>
+            )}
+          </p>
+          <p className="mt-1 text-xs text-amber-400/70">
+            Keep this tab open to complete verification.
+          </p>
+        </div>
+      )}
+
+      {/* Wait confirmation dialog */}
+      {showWaitConfirm && (
+        <div className="rounded-md border border-amber-700 bg-amber-900/30 p-4">
+          <p className="text-sm font-medium text-amber-300">
+            High traffic detected
+          </p>
+          <p className="mt-1 text-sm text-amber-400/80">
+            Verification is estimated to take {formatWaitTime(estimatedWaitSeconds)}.
+            Would you like to wait? You must keep this tab open.
+          </p>
+          <div className="mt-3 flex gap-2">
+            <button
+              type="button"
+              onClick={handleConfirmWait}
+              className="rounded-md bg-amber-600 px-3 py-1.5 text-sm font-medium text-slate-950 transition hover:bg-amber-500"
+            >
+              Yes, wait
+            </button>
+            <button
+              type="button"
+              onClick={handleCancelWait}
+              className="rounded-md border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm font-medium text-slate-300 transition hover:bg-slate-700"
+            >
+              Skip verification
+            </button>
+          </div>
+        </div>
+      )}
+
       <button
         type="submit"
-        disabled={submitting}
+        disabled={submitting || !!pendingVerification}
         className="w-full rounded-md bg-sky-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {submitting ? "Submitting..." : "Submit Steps"}
+        {submitting ? "Submitting..." : pendingVerification ? "Verifying..." : "Submit Steps"}
       </button>
     </form>
   );
@@ -176,4 +385,16 @@ function parseApiMessage(payload: unknown): string | null {
     return (payload as { error: string }).error;
   }
   return null;
+}
+
+function formatWaitTime(seconds: number): string {
+  if (seconds < 60) {
+    return `${seconds}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const remainingSeconds = seconds % 60;
+  if (remainingSeconds === 0) {
+    return `${minutes}m`;
+  }
+  return `${minutes}m ${remainingSeconds}s`;
 }
