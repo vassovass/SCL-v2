@@ -9,7 +9,7 @@ echo.
 
 set GEMINI_API_KEY=AIzaSyCzcR4YB5MLUwHsdmaaq5Djp8qbC3OYisw
 
-curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=%GEMINI_API_KEY%" -H "Content-Type: application/json" -d "{\"contents\":[{\"parts\":[{\"text\":\"Reply with only: OK\"}]}]}" > "%TEMP%\gemini_test.json" 2>&1
+curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=%GEMINI_API_KEY%" -H "Content-Type: application/json" -d "{\"contents\":[{\"parts\":[{\"text\":\"Reply with only: OK\"}]}]}" > "%TEMP%\gemini_test.json" 2>&1
 
 findstr /C:"candidates" "%TEMP%\gemini_test.json" >nul 2>&1
 if %ERRORLEVEL% NEQ 0 (
