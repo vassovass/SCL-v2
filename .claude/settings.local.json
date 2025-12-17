@@ -5,7 +5,15 @@
       "Bash(npm run lint)",
       "Bash(git checkout:*)",
       "Bash(git merge:*)",
-      "Bash(Copy-Item \"C:\\Users\\vasso\\.claude-worktrees\\SCL-v2\\mystifying-wiles\\apps\\web\\.env.local\" \"D:\\Vasso\\coding projects\\SCL v2\\SCL-v2\\apps\\web\\.env.local\" -Force)"
+      "Bash(Copy-Item \"C:\\Users\\vasso\\.claude-worktrees\\SCL-v2\\mystifying-wiles\\apps\\web\\.env.local\" \"D:\\Vasso\\coding projects\\SCL v2\\SCL-v2\\apps\\web\\.env.local\" -Force)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nUpdate Gemini model to gemini-2.5-flash\n\n- Updated run-dev.bat to use gemini-2.5-flash for API testing\n- Updated Edge Function to use gemini-2.5-flash as default model\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nAdd superadmin system and dynamic site settings\n\n- Add is_superadmin column to users table\n- Create site_settings table for dynamic configuration\n- Add /admin page for superadmin management\n- Add API routes for settings and superadmin management\n- Update Edge Function to read settings from database with caching\n- Add client-side retry queue for rate-limited verifications\n- Show wait confirmation dialog if estimated wait > 3 minutes\n\nSettings include: gemini_model, rate limits (per-minute, per-hour, global)\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(supabase db push:*)",
+      "Bash(supabase functions deploy:*)",
+      "Bash(git fetch:*)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
