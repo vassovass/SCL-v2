@@ -16,7 +16,11 @@ app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max limit
 
 # Ensure upload directory exists
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+try:
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+except OSError:
+    # Vercel has a read-only file system, so we skip creating the directory
+    pass
 
 def get_db_connection():
     conn = sqlite3.connect(DB_PATH)
