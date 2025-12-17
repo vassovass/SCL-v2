@@ -90,7 +90,14 @@ async function fetchData() {
 ```
 
 ## Commands
-- `npm run dev` - Start dev server
+- `npm run dev` - Start dev server (in apps/web)
 - `npm run lint` - Check code
+- `npm run deploy` - Build and deploy to Cloudflare (uses OpenNext)
 - `supabase db push` - Apply migrations
 - `supabase functions deploy verify` - Deploy Edge Function
+
+## Deployment
+- Cloudflare Workers via OpenNext adapter
+- Build command: `npm ci && npm run deploy`
+- Root directory: `apps/web`
+- wrangler.toml configures Worker entry point

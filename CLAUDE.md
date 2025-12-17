@@ -138,13 +138,27 @@ supabase db push                    # Apply migrations
 supabase functions deploy verify    # Deploy verification function
 ```
 
-## Deployment (Cloudflare)
+## Deployment (Cloudflare Workers)
 
-1. Connect GitHub repo to Cloudflare Pages
-2. Build command: `npm run deploy` (in apps/web)
-3. Build output directory: `.open-next`
-4. Set environment variables in Cloudflare dashboard
-5. Deploy Supabase Edge Function separately
+### Cloudflare Dashboard Setup
+1. Create new Workers project, connect GitHub repo `vassovass/SCL-v2`
+2. Configure build settings:
+   - **Build command**: `npm ci && npm run deploy`
+   - **Deploy command**: *(leave empty)*
+   - **Root directory**: `apps/web`
+   - **Production branch**: `main`
+3. Add environment variables (Settings > Variables):
+   - `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anon key
+   - `SUPABASE_SERVICE_ROLE_KEY` - (encrypted) Service role key
+   - `GEMINI_API_KEY` - (encrypted) Gemini API key
+4. Deploy Supabase Edge Function separately: `supabase functions deploy verify`
+
+### How It Works
+- `npm run deploy` runs `opennextjs-cloudflare build && opennextjs-cloudflare deploy`
+- OpenNext builds Next.js and outputs to `.open-next/`
+- `wrangler.toml` configures the Worker (entry: `.open-next/worker.js`)
+- Cloudflare serves the app from Workers
 
 ## File Quick Reference
 

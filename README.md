@@ -75,14 +75,20 @@ Inside `apps/web`:
 | `npm run preview` | Build + run on Miniflare |
 | `npm run deploy` | Deploy to Cloudflare |
 
-## Deployment (Cloudflare Pages)
+## Deployment (Cloudflare Workers)
 
-1. Connect GitHub repo to Cloudflare Pages
-2. **Build command**: Leave empty (handled by deploy command)
-3. **Deploy command**: `npx wrangler deploy`
-4. **Path**: `apps/web`
-5. Add environment variables in Settings > Variables (encrypt secrets)
-6. Deploy Supabase Edge Function separately with `supabase functions deploy verify`
+1. Create Workers project in Cloudflare, connect GitHub repo
+2. Configure build settings:
+   - **Build command**: `npm ci && npm run deploy`
+   - **Deploy command**: *(leave empty)*
+   - **Root directory**: `apps/web`
+   - **Production branch**: `main`
+3. Add environment variables in Settings > Variables:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY` (encrypt)
+   - `GEMINI_API_KEY` (encrypt)
+4. Deploy Supabase Edge Function: `supabase functions deploy verify`
 
 ## Project Structure
 
