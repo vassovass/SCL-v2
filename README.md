@@ -77,6 +77,8 @@ Inside `apps/web`:
 
 ## Deployment (Cloudflare Workers)
 
+**IMPORTANT: Cloudflare auto-deploys from `main` branch only. Always push to `main` for deployment.**
+
 1. Create Workers project in Cloudflare, connect GitHub repo
 2. Configure build settings:
    - **Build command**: `npm ci && npm run deploy`
@@ -89,6 +91,11 @@ Inside `apps/web`:
    - `SUPABASE_SERVICE_ROLE_KEY` (encrypt)
    - `GEMINI_API_KEY` (encrypt)
 4. Deploy Supabase Edge Function: `supabase functions deploy verify`
+
+### Required Files
+Do not delete these files (build will fail):
+- `apps/web/open-next.config.ts` - OpenNext configuration
+- `apps/web/wrangler.toml` - Worker configuration
 
 ## Project Structure
 

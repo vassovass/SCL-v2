@@ -138,7 +138,28 @@ supabase db push                    # Apply migrations
 supabase functions deploy verify    # Deploy verification function
 ```
 
+## Git Workflow
+
+**IMPORTANT: All deployable code must be on the `main` branch.**
+
+- Cloudflare is configured to auto-deploy from `main` only
+- Feature branches and worktrees will NOT trigger deployments
+- Always merge/push to `main` when ready to deploy
+- For hotfixes: commit directly to `main` or fast-forward merge
+
+```bash
+# From any branch, merge to main and deploy
+git checkout main
+git merge your-feature-branch
+git push origin main
+```
+
 ## Deployment (Cloudflare Workers)
+
+### Required Files (DO NOT DELETE)
+These files are required for Cloudflare deployment:
+- `apps/web/open-next.config.ts` - OpenNext configuration (build fails without this)
+- `apps/web/wrangler.toml` - Cloudflare Worker configuration
 
 ### Cloudflare Dashboard Setup
 1. Create new Workers project, connect GitHub repo `vassovass/SCL-v2`
@@ -146,7 +167,7 @@ supabase functions deploy verify    # Deploy verification function
    - **Build command**: `npm ci && npm run deploy`
    - **Deploy command**: *(leave empty)*
    - **Root directory**: `apps/web`
-   - **Production branch**: `main`
+   - **Production branch**: `main` (MUST be main for auto-deploy)
 3. Add environment variables (Settings > Variables):
    - `NEXT_PUBLIC_SUPABASE_URL` - Supabase project URL
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` - Supabase anon key
@@ -157,8 +178,16 @@ supabase functions deploy verify    # Deploy verification function
 ### How It Works
 - `npm run deploy` runs `opennextjs-cloudflare build && opennextjs-cloudflare deploy`
 - OpenNext builds Next.js and outputs to `.open-next/`
+- `open-next.config.ts` configures OpenNext (required, prevents interactive prompts in CI)
 - `wrangler.toml` configures the Worker (entry: `.open-next/worker.js`)
 - Cloudflare serves the app from Workers
+
+### Troubleshooting Deployment
+| Error | Cause | Fix |
+|-------|-------|-----|
+| "Missing required open-next.config.ts" | Config file deleted | Restore `apps/web/open-next.config.ts` |
+| Build runs but doesn't deploy | Wrong branch | Push changes to `main` branch |
+| CVE warnings for @opennextjs/cloudflare | Outdated package | Update to `^1.3.0` or later |
 
 ## File Quick Reference
 
