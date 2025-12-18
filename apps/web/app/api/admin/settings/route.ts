@@ -7,7 +7,7 @@ import { getServiceClient, requireUser } from "@/lib/server/supabase";
 // GET /api/admin/settings - Get all site settings
 export async function GET(req: NextRequest) {
   try {
-    const user = await requireUser(req);
+    const { user } = await requireUser(req);
     const supabase = getServiceClient();
 
     // Check if user is superadmin
@@ -44,7 +44,7 @@ const UpdateSettingSchema = z.object({
 // PATCH /api/admin/settings - Update a site setting
 export async function PATCH(req: NextRequest) {
   try {
-    const user = await requireUser(req);
+    const { user } = await requireUser(req);
     const supabase = getServiceClient();
 
     // Check if user is superadmin

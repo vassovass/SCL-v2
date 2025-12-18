@@ -11,6 +11,9 @@ export function getAdminClient(): SupabaseClient {
   return adminClient;
 }
 
+// Alias for compatibility with admin routes
+export const getServiceClient = getAdminClient;
+
 export function createRequestClient(authHeader?: string | null): SupabaseClient {
   const headers = authHeader ? { Authorization: authHeader } : {};
   return createClient(serverEnv.supabaseUrl, serverEnv.supabaseAnonKey, {

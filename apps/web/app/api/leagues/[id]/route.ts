@@ -6,9 +6,9 @@ import { formatDate, getStepWeekRange, getTodayUtc, type StepWeekStart } from "@
 
 const paramsSchema = z.object({ id: z.string().uuid() });
 
-export async function GET(req: Request, context: { params: { id: string } }): Promise<Response> {
+export async function GET(req: Request, context: { params: Promise<{ id: string }> }): Promise<Response> {
   try {
-    const params = paramsSchema.parse(context.params);
+    const params = paramsSchema.parse(await context.params);
     const { supabase } = await requireUser(req);
 
     const { data, error } = await supabase
