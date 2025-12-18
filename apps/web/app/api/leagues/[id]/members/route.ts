@@ -40,14 +40,18 @@ export async function GET(req: Request, context: { params: Promise<{ id: string 
       return json({ members: [] });
     }
 
-    const members = data.map((row) => ({
-      user_id: row.user_id,
-      role: row.role,
-      joined_at: row.joined_at,
-      display_name: row.users?.display_name ?? null,
-      units: row.users?.units ?? null,
-      user_created_at: row.users?.created_at ?? null,
-    }));
+    const members = data.map((row) => {
+      // Supabase returns joined data as array, get first element
+      const userInfo = Array.isArray(row.users) ? row.users[0] : row.users;
+      return {
+        user_id: row.user_id,
+        role: row.role,
+        joined_at: row.joined_at,
+        display_name: userInfo?.display_name ?? null,
+        units: userInfo?.units ?? null,
+        user_created_at: userInfo?.created_at ?? null,
+      };
+    });
 
     return json({ members });
   } catch (error) {
