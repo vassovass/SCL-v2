@@ -4,6 +4,21 @@ import { badRequest, forbidden, handleRouteError, json } from "@/lib/server/http
 import { requireUser } from "@/lib/server/supabase";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+interface LeaderboardEntry {
+  rank: number;
+  user_id: string;
+  display_name: string | null;
+  total_steps: number;
+  total_km: number;
+  total_calories: number;
+  partial_days: number;
+  missed_days: number;
+  verified_days: number;
+  unverified_days: number;
+  member_total?: number;
+  team_total_steps?: number;
+}
+
 const querySchema = z.object({
   league_id: z.string().uuid(),
   period: z.enum(["day", "week", "month", "custom"]),
@@ -50,7 +65,7 @@ export async function GET(req: Request): Promise<Response> {
       throw error;
     }
 
-    const entries = data ?? [];
+    const entries: LeaderboardEntry[] = data ?? [];
     let totalMembers = entries[0]?.member_total ?? null;
     if (totalMembers === null) {
       totalMembers = await membershipCountFallback(supabase, parsed.league_id);
