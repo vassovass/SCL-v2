@@ -94,7 +94,7 @@ export async function POST(request: Request) {
     await supabase.from("memberships").insert({
       league_id: league.id,
       user_id: user.id,
-      role: "owner",
+      role: "owner" as const,
     });
 
     return json({ league }, { status: 201 });

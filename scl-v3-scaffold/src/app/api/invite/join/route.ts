@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     const { error: joinError } = await supabase.from("memberships").insert({
       league_id: league.id,
       user_id: user.id,
-      role: "member",
+      role: "member" as const,
     });
 
     if (joinError) {
