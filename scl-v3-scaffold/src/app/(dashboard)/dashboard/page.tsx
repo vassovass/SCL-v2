@@ -18,14 +18,14 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!session) return;
+    if (!session || !user) return;
 
     const fetchLeagues = async () => {
       const supabase = createClient();
       const { data, error } = await supabase
         .from("memberships")
         .select("role, leagues(id, name)")
-        .eq("user_id", user?.id);
+        .eq("user_id", user.id);
 
       if (error) {
         console.error("Error fetching leagues:", error);
@@ -44,7 +44,7 @@ export default function DashboardPage() {
     };
 
     fetchLeagues();
-  }, [session, user?.id]);
+  }, [session, user]);
 
   return (
     <div className="min-h-screen bg-slate-950">
