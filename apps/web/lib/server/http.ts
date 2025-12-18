@@ -29,6 +29,10 @@ export function badRequest(message = "Bad Request", details?: Record<string, unk
   return jsonError(400, message, details);
 }
 
+export function serverError(message = "Internal Server Error"): Response {
+  return jsonError(500, message);
+}
+
 export function handleRouteError(cause: unknown): Response {
   if (cause instanceof Response) {
     return cause;

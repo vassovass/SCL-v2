@@ -6,7 +6,7 @@ import { getServiceClient, requireUser } from "@/lib/server/supabase";
 // GET /api/admin/users - List all users (for superadmin to manage)
 export async function GET(req: NextRequest) {
   try {
-    const user = await requireUser(req);
+    const { user } = await requireUser(req);
     const supabase = getServiceClient();
 
     // Check if user is superadmin

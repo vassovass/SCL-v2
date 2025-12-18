@@ -5,9 +5,9 @@ import { getAdminClient, requireUser } from "@/lib/server/supabase";
 
 const paramsSchema = z.object({ id: z.string().uuid() });
 
-export async function GET(req: Request, context: { params: { id: string } }): Promise<Response> {
+export async function GET(req: Request, context: { params: Promise<{ id: string }> }): Promise<Response> {
   try {
-    const params = paramsSchema.parse(context.params);
+    const params = paramsSchema.parse(await context.params);
     const { supabase, user } = await requireUser(req);
 
     const { data: membership, error: membershipError } = await supabase

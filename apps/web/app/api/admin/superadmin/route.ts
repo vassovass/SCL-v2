@@ -7,7 +7,7 @@ import { getServiceClient, requireUser } from "@/lib/server/supabase";
 // GET /api/admin/superadmin - List all superadmins
 export async function GET(req: NextRequest) {
   try {
-    const user = await requireUser(req);
+    const { user } = await requireUser(req);
     const supabase = getServiceClient();
 
     // Check if user is superadmin
@@ -45,7 +45,7 @@ const SetSuperadminSchema = z.object({
 // POST /api/admin/superadmin - Promote/demote a user
 export async function POST(req: NextRequest) {
   try {
-    const user = await requireUser(req);
+    const { user } = await requireUser(req);
     const supabase = getServiceClient();
 
     // Check if user is superadmin
