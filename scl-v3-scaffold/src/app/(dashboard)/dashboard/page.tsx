@@ -33,11 +33,20 @@ export default function DashboardPage() {
         return;
       }
 
-      const mapped = (data || []).map((m) => ({
-        id: (m.leagues as { id: string; name: string }).id,
-        name: (m.leagues as { id: string; name: string }).name,
-        role: m.role,
-      }));
+      // Type the response data explicitly
+      type MembershipRow = {
+        role: string;
+        leagues: { id: string; name: string } | null;
+      };
+
+      const rows = (data || []) as MembershipRow[];
+      const mapped = rows
+        .filter((m) => m.leagues !== null)
+        .map((m) => ({
+          id: m.leagues!.id,
+          name: m.leagues!.name,
+          role: m.role,
+        }));
 
       setLeagues(mapped);
       setLoading(false);
