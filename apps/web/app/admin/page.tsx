@@ -19,7 +19,7 @@ interface User {
 }
 
 export default function AdminPage() {
-  const { user, loading: authLoading } = useAuth();
+  const { user, session, loading: authLoading } = useAuth();
   const [settings, setSettings] = useState<Setting[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [isSuperadmin, setIsSuperadmin] = useState(false);
@@ -38,7 +38,7 @@ export default function AdminPage() {
       try {
         // Load settings
         const settingsRes = await fetch("/api/admin/settings", {
-          headers: { Authorization: `Bearer ${(await user.getIdToken?.()) || ""}` },
+          headers: { Authorization: `Bearer ${session?.access_token || ""}` },
         });
 
         if (settingsRes.status === 403) {
@@ -57,7 +57,7 @@ export default function AdminPage() {
 
         // Load users
         const usersRes = await fetch("/api/admin/users", {
-          headers: { Authorization: `Bearer ${(await user.getIdToken?.()) || ""}` },
+          headers: { Authorization: `Bearer ${session?.access_token || ""}` },
         });
 
         if (usersRes.ok) {
@@ -81,7 +81,7 @@ export default function AdminPage() {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${(await user?.getIdToken?.()) || ""}`,
+          Authorization: `Bearer ${session?.access_token || ""}`,
         },
         body: JSON.stringify({ key, value }),
       });
@@ -106,7 +106,7 @@ export default function AdminPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${(await user?.getIdToken?.()) || ""}`,
+          Authorization: `Bearer ${session?.access_token || ""}`,
         },
         body: JSON.stringify({ user_id: userId, is_superadmin: makeSuperadmin }),
       });

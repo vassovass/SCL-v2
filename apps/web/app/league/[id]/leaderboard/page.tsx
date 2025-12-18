@@ -1,9 +1,10 @@
 import { LeagueLeaderboardView } from "@/components/leaderboard/LeagueLeaderboardView";
 
 interface LeaderboardPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export default function LeagueLeaderboardPage({ params }: LeaderboardPageProps) {
-  return <LeagueLeaderboardView leagueId={params.id} />;
+export default async function LeagueLeaderboardPage({ params }: LeaderboardPageProps) {
+  const { id } = await params;
+  return <LeagueLeaderboardView leagueId={id} />;
 }
