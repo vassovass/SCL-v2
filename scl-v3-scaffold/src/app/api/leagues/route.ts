@@ -7,6 +7,18 @@ const createLeagueSchema = z.object({
   stepweek_start: z.enum(["monday", "sunday"]).default("monday"),
 });
 
+// Type for membership with joined league data
+type MembershipWithLeague = {
+  role: string;
+  leagues: {
+    id: string;
+    name: string;
+    stepweek_start: string;
+    invite_code: string;
+    created_at: string;
+  } | null;
+};
+
 // GET /api/leagues - List user's leagues
 export async function GET() {
   try {
@@ -26,10 +38,13 @@ export async function GET() {
       return serverError(error.message);
     }
 
-    const leagues = (data || []).map((m) => ({
-      ...(m.leagues as object),
-      role: m.role,
-    }));
+    const rows = (data || []) as MembershipWithLeague[];
+    const leagues = rows
+      .filter((m) => m.leagues !== null)
+      .map((m) => ({
+        ...m.leagues!,
+        role: m.role,
+      }));
 
     return json({ leagues });
   } catch (error) {

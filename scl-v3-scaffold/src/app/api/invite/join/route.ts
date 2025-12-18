@@ -26,15 +26,18 @@ export async function POST(request: Request) {
     const { invite_code } = parsed.data;
 
     // Find league
-    const { data: league, error: leagueError } = await supabase
+    const { data: leagueData, error: leagueError } = await supabase
       .from("leagues")
       .select("id, name")
       .eq("invite_code", invite_code.toUpperCase())
       .single();
 
-    if (leagueError || !league) {
+    if (leagueError || !leagueData) {
       return notFound("Invalid invite code");
     }
+
+    // Type assertion for the league data
+    const league = leagueData as { id: string; name: string };
 
     // Check if already a member
     const { data: existing } = await supabase
