@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { json, badRequest, unauthorized, serverError, notFound } from "@/lib/api";
+import type { Insertable } from "@/types/database";
 
 const joinSchema = z.object({
   invite_code: z.string().min(4).max(10),
@@ -52,11 +53,13 @@ export async function POST(request: Request) {
     }
 
     // Join league
-    const { error: joinError } = await supabase.from("memberships").insert({
+    const membership: Insertable<"memberships"> = {
       league_id: league.id,
       user_id: user.id,
-      role: "member" as const,
-    });
+      role: "member",
+    };
+    // @ts-expect-error - Supabase types mismatch with custom Database type
+    const { error: joinError } = await supabase.from("memberships").insert(membership);
 
     if (joinError) {
       return serverError(joinError.message);

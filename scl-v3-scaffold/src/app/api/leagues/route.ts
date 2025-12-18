@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { json, badRequest, unauthorized, serverError } from "@/lib/api";
+import type { Insertable } from "@/types/database";
 
 const createLeagueSchema = z.object({
   name: z.string().min(1).max(100),
@@ -91,11 +92,13 @@ export async function POST(request: Request) {
     }
 
     // Add creator as owner
-    await supabase.from("memberships").insert({
+    const ownerMembership: Insertable<"memberships"> = {
       league_id: league.id,
       user_id: user.id,
-      role: "owner" as const,
-    });
+      role: "owner",
+    };
+    // @ts-expect-error - Supabase types mismatch with custom Database type
+    await supabase.from("memberships").insert(ownerMembership);
 
     return json({ league }, { status: 201 });
   } catch (error) {
