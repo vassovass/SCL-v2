@@ -2,6 +2,8 @@
 
 A step-tracking competition platform built with Next.js 14 and Supabase.
 
+> **For AI Assistants**: See [CLAUDE.md](./CLAUDE.md) for full technical context, patterns, and gotchas.
+
 ## Quick Start
 
 ### 1. Install Dependencies
@@ -12,13 +14,11 @@ npm install
 
 ### 2. Set Up Environment Variables
 
-Copy the example file and fill in your values:
-
 ```bash
 cp .env.example .env.local
 ```
 
-Edit `.env.local` with your Supabase credentials:
+Edit `.env.local`:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
@@ -33,7 +33,7 @@ GEMINI_API_KEY=your-gemini-key
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
@@ -42,24 +42,16 @@ Open [http://localhost:3000](http://localhost:3000) in your browser.
 ### Step 1: Push to GitHub
 
 ```bash
-git init
 git add .
-git commit -m "Initial commit"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/scl-v3.git
-git push -u origin main
+git commit -m "Your commit message"
+git push origin main
 ```
 
 ### Step 2: Import to Vercel
 
-1. Go to [vercel.com](https://vercel.com)
-2. Click "Add New..." → "Project"
-3. Select your `scl-v3` repository
-4. Click "Import"
-
-### Step 3: Add Environment Variables
-
-In the Vercel configuration screen, add:
+1. Go to [vercel.com](https://vercel.com) → "Add New..." → "Project"
+2. Select your `scl-v3` repository
+3. Add environment variables:
 
 | Variable | Value |
 |----------|-------|
@@ -68,17 +60,17 @@ In the Vercel configuration screen, add:
 | `SUPABASE_SERVICE_ROLE_KEY` | Your service role key |
 | `GEMINI_API_KEY` | Your Gemini API key |
 
-### Step 4: Deploy
+4. Click "Deploy"
 
-Click "Deploy" and wait ~2 minutes.
+### Step 3: Configure Supabase Auth (Critical!)
 
-### Step 5: Update Supabase
+Update Supabase to use your Vercel URL instead of localhost:
 
-Add your Vercel URL to Supabase:
+1. Go to **Supabase Dashboard** → **Authentication** → **URL Configuration**
+2. Set **Site URL**: `https://your-app.vercel.app`
+3. Add to **Redirect URLs**: `https://your-app.vercel.app/**`
 
-1. Go to Supabase Dashboard → Authentication → URL Configuration
-2. Add `https://your-app.vercel.app` to Site URL
-3. Add `https://your-app.vercel.app/**` to Redirect URLs
+Without this, confirmation emails will redirect to localhost.
 
 ---
 
@@ -87,12 +79,13 @@ Add your Vercel URL to Supabase:
 ```
 src/
 ├── app/                    # Pages and API routes
-│   ├── (auth)/             # Auth pages (sign-in, sign-up)
-│   ├── (dashboard)/        # Protected pages
+│   ├── (auth)/             # Sign-in, sign-up pages
+│   ├── (dashboard)/        # Protected pages (dashboard, leagues)
 │   └── api/                # API routes
 ├── components/             # React components
-│   └── providers/          # Context providers
+│   └── providers/          # Auth context provider
 ├── lib/                    # Utilities
+│   ├── api.ts              # API response helpers
 │   └── supabase/           # Supabase clients
 └── types/                  # TypeScript types
 ```
@@ -112,30 +105,53 @@ src/
 
 ## Tech Stack
 
-- **Framework**: Next.js 14.2 (App Router)
-- **Database**: Supabase (PostgreSQL)
-- **Auth**: Supabase Auth
-- **Styling**: Tailwind CSS
-- **Validation**: Zod
+| Technology | Version | Purpose |
+|------------|---------|---------|
+| Next.js | 14.2.18 | Framework (App Router) |
+| Supabase | Latest | Database, Auth, Storage |
+| Tailwind CSS | 3.4 | Styling |
+| Zod | 3.23 | Validation |
+| TypeScript | 5.x | Type safety |
 
 ---
 
-## Reusing from SCL v2
+## Key Architecture Decisions
 
-This project is designed to work with your existing Supabase database from SCL v2.
-The database schema, RPC functions, and storage buckets are already configured.
+1. **Next.js 14.2.x** (not 15) - Avoids async params breaking changes
+2. **Untyped Supabase clients** - Simpler, avoids complex type inference issues
+3. **Flat structure** - No monorepo complexity
+4. **Vercel deployment** - Zero-config, auto-deploy from main branch
 
-To generate proper TypeScript types from your database:
+See [CLAUDE.md](./CLAUDE.md) for detailed explanations.
+
+---
+
+## Using Existing SCL v2 Database
+
+This project connects to your existing Supabase database from SCL v2. The schema, RPC functions, Edge Functions, and storage buckets are already configured.
+
+**Optional**: Generate TypeScript types from your database:
 
 ```bash
 npx supabase gen types typescript --project-id YOUR_PROJECT_ID > src/types/database.ts
 ```
 
+Note: Current setup uses untyped Supabase clients. See CLAUDE.md for why.
+
 ---
 
-## Notes
+## Troubleshooting
 
-- Built for Vercel (zero-config deployment)
-- Uses Next.js 14.2.x (stable, no async params issues)
-- Flat structure (no monorepo complexity)
-- TypeScript strict mode enabled
+| Issue | Solution |
+|-------|----------|
+| Auth redirects to localhost | Update Site URL in Supabase → Auth → URL Configuration |
+| Build fails with type errors | See CLAUDE.md for common patterns |
+| `useSearchParams` error | Wrap component in `<Suspense>` boundary |
+| Supabase query returns `never` | Use untyped client with `any` casts |
+
+---
+
+## Documentation
+
+- **[CLAUDE.md](./CLAUDE.md)** - Full technical context for AI assistants
+- **SCL v2 repo** - Contains Supabase migrations and Edge Functions
