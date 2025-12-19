@@ -1,24 +1,11 @@
 import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { json, badRequest, unauthorized, serverError } from "@/lib/api";
-import type { Insertable } from "@/types/database";
 
 const createLeagueSchema = z.object({
   name: z.string().min(1).max(100),
   stepweek_start: z.enum(["monday", "sunday"]).default("monday"),
 });
-
-// Type for membership with joined league data
-type MembershipWithLeague = {
-  role: string;
-  leagues: {
-    id: string;
-    name: string;
-    stepweek_start: string;
-    invite_code: string;
-    created_at: string;
-  } | null;
-};
 
 // GET /api/leagues - List user's leagues
 export async function GET() {
@@ -39,11 +26,10 @@ export async function GET() {
       return serverError(error.message);
     }
 
-    const rows = (data || []) as MembershipWithLeague[];
-    const leagues = rows
-      .filter((m) => m.leagues !== null)
-      .map((m) => ({
-        ...m.leagues!,
+    const leagues = (data || [])
+      .filter((m: any) => m.leagues !== null)
+      .map((m: any) => ({
+        ...m.leagues,
         role: m.role,
       }));
 
@@ -92,13 +78,11 @@ export async function POST(request: Request) {
     }
 
     // Add creator as owner
-    const ownerMembership: Insertable<"memberships"> = {
+    await supabase.from("memberships").insert({
       league_id: league.id,
       user_id: user.id,
       role: "owner",
-    };
-    // @ts-expect-error - Supabase types mismatch with custom Database type
-    await supabase.from("memberships").insert(ownerMembership);
+    });
 
     return json({ league }, { status: 201 });
   } catch (error) {

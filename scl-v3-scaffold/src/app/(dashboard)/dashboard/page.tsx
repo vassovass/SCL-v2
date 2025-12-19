@@ -9,7 +9,6 @@ interface League {
   id: string;
   name: string;
   role: string;
-  member_count?: number;
 }
 
 export default function DashboardPage() {
@@ -33,18 +32,11 @@ export default function DashboardPage() {
         return;
       }
 
-      // Type the response data explicitly
-      type MembershipRow = {
-        role: string;
-        leagues: { id: string; name: string } | null;
-      };
-
-      const rows = (data || []) as MembershipRow[];
-      const mapped = rows
-        .filter((m) => m.leagues !== null)
-        .map((m) => ({
-          id: m.leagues!.id,
-          name: m.leagues!.name,
+      const mapped = (data || [])
+        .filter((m: any) => m.leagues !== null)
+        .map((m: any) => ({
+          id: m.leagues.id,
+          name: m.leagues.name,
           role: m.role,
         }));
 

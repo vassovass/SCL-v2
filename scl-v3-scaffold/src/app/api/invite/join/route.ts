@@ -1,7 +1,6 @@
 import { z } from "zod";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { json, badRequest, unauthorized, serverError, notFound } from "@/lib/api";
-import type { Insertable } from "@/types/database";
 
 const joinSchema = z.object({
   invite_code: z.string().min(4).max(10),
@@ -27,18 +26,15 @@ export async function POST(request: Request) {
     const { invite_code } = parsed.data;
 
     // Find league
-    const { data: leagueData, error: leagueError } = await supabase
+    const { data: league, error: leagueError } = await supabase
       .from("leagues")
       .select("id, name")
       .eq("invite_code", invite_code.toUpperCase())
       .single();
 
-    if (leagueError || !leagueData) {
+    if (leagueError || !league) {
       return notFound("Invalid invite code");
     }
-
-    // Type assertion for the league data
-    const league = leagueData as { id: string; name: string };
 
     // Check if already a member
     const { data: existing } = await supabase
@@ -53,13 +49,11 @@ export async function POST(request: Request) {
     }
 
     // Join league
-    const membership: Insertable<"memberships"> = {
+    const { error: joinError } = await supabase.from("memberships").insert({
       league_id: league.id,
       user_id: user.id,
       role: "member",
-    };
-    // @ts-expect-error - Supabase types mismatch with custom Database type
-    const { error: joinError } = await supabase.from("memberships").insert(membership);
+    });
 
     if (joinError) {
       return serverError(joinError.message);
